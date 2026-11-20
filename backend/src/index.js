@@ -1,4 +1,3 @@
-import { InferenceClient } from "@huggingface/inference";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,8 +19,8 @@ export default {
     }
 
     try {
-      if (!env.HF_TOKEN) {
-        throw new Error("Server token is not configured.");
+      if (!env.AI) {
+        throw new Error("Cloudflare AI binding is missing.");
       }
 
       const body = await request.json();
@@ -34,26 +33,29 @@ export default {
         );
       }
 
-      const client = new InferenceClient(env.HF_TOKEN);
-
-      const image = await client.textToImage({
-        model: "black-forest-labs/FLUX.1-dev",
-        inputs: prompt.trim(),
-        provider: "auto",
-      });
+      const image = await env.AI.run(
+        "@cf/black-forest-labs/flux-1-schnell",
+        {
+          prompt: prompt.trim()
+        }
+      );
 
       return new Response(image, {
         headers: {
           ...corsHeaders,
-          "Content-Type": "image/png",
-          "Cache-Control": "no-store",
-        },
+          "Content-Type": "image/jpeg",
+          "Cache-Control": "no-store"
+        }
       });
+
     } catch (error) {
       return Response.json(
-        { error: "Image generation failed.", detail: error.message },
+        {
+          error: "Image generation failed.",
+          detail: error.message
+        },
         { status: 500, headers: corsHeaders }
       );
     }
-  },
+  }
 };
